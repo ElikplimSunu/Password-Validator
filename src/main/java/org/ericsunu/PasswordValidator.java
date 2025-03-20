@@ -1,84 +1,131 @@
 package org.ericsunu;
 
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.List;
+
 public class PasswordValidator {
-    boolean[] passwordValidityStates = new boolean[4];
+    PasswordValidationRules rules;
+
+    public PasswordValidator() {
+        this.rules = new PasswordValidationRules();
+    }
 
     /**
-     * Validates the given password based on the following criteria:
-     * - Must not be null (throws IllegalArgumentException if it is).
-     * - Must be at least 8 characters long.
-     * - Must contain at least one uppercase letter.
-     * - Must contain at least one lowercase letter.
-     * - Must contain at least one digit.
-     * - Must contain at least one special character from the set: !@#$%^&*
+     * Validates the given password based on the criteria:
+     * - Not null (throws IllegalArgumentException if it is).
+     * - At least 8 characters long.
+     * - Contains at least one uppercase letter, one lowercase letter, one digit, and one special character.
      *
-     * @param password the password string to validate
-     * @return true if the password meets all criteria, false otherwise
+     * @param password the password to validate
+     * @return <true, emptyList()></> if all criteria are met, false otherwise
      */
-    public boolean isValid(String password) {
+
+    public AbstractMap.SimpleEntry<Boolean, List<String>> isValid(String password) {
+        List<String> errors = new ArrayList<>();
+        boolean isValid  = true;
+        if(!validate(password).isEmpty()) {
+            isValid = false;
+            errors = validate(password);
+        }
+        return new AbstractMap.SimpleEntry<>(isValid, errors);
+    }
+
+    public List<String> validate (String password) {
+        List<String> errors = new ArrayList<>();
+
         if (password == null) {
-            throw new IllegalArgumentException("Password cannot be null");
+            errors.add("Password cannot be null");
+            return errors;
         }
 
-        var passwordLength = password.length();
-
-        // Check minimum length
-        if (passwordLength < 8) {
-            return false;
+        if (password.length() < rules.getMinLength()) {
+            errors.add("Password is too short. The password should be at least: " + rules.getMinLength());
         }
 
+        if (rules.isRequireUppercase() &&  password.chars().noneMatch(Character::isUpperCase)) {
+            errors.add("Password must contain at least one uppercase character");
+        }
+
+        if (rules.isRequireLowercase() &&  password.chars().noneMatch(Character::isLowerCase)) {
+            errors.add("Password must contain at least one lowercase character");
+        }
+
+        if (rules.isRequireDigit() &&  password.chars().noneMatch(Character::isDigit)) {
+            errors.add("Password must contain at least one lowercase character");
+        }
+
+        if (rules.isRequireSpecial() &&  password.chars().noneMatch(c -> rules.getSpecialCharacter().indexOf(c) >= 0)) {
+            errors.add("Password must contain at least one lowercase character");
+        }
+
+        return errors;
+    }
+
+    /**
+     * Calculates the strength of a valid password.
+     * This method assumes the password is non-null.
+     *
+     * @param password the password to evaluate
+     * @return the PasswordStrength level
+     */
+    public PasswordStrength checkPasswordStrength(String password) {
+        // Optionally, ensure the password is valid first
+        if (!isValid(password).getKey()) {
+            return PasswordStrength.WEAK; // Or handle invalid passwords separately
+        }
+
+        int passwordScore = 0;
+        int length = password.length();
+
+        // Length scoring
+        if (length >= rules.getMinLength()) {
+            passwordScore += rules.getScoreFactor();
+        }
+        if (length >= (rules.getMinLength() + 4)) {
+            passwordScore += rules.getScoreFactor();
+        }
+        if (length >= (rules.getMinLength() + 2)) {
+            passwordScore += rules.getScoreFactor();
+        }
+
+        // Recalculate character criteria locally
         boolean hasUpper = false;
         boolean hasLower = false;
         boolean hasDigit = false;
         boolean hasSpecial = false;
-        var passwordArray = password.toCharArray();
 
-        // Check each character of the password
-        for (char c : passwordArray) {
-            if (Character.isUpperCase(c)) {
-                hasUpper = true;
-            } else if (Character.isLowerCase(c)) {
-                hasLower = true;
-            } else if (Character.isDigit(c)) {
-                hasDigit = true;
-            } else if ("!@#$%^&*()_+-=[]{}|;:'\\\",.<>?/`~".indexOf(c) >= 0) {
-                hasSpecial = true;
-            }
-        }
-        passwordValidityStates[0] = hasUpper;
-        passwordValidityStates[1] = hasLower;
-        passwordValidityStates[2] = hasDigit;
-        passwordValidityStates[3] = hasSpecial;
-
-        return hasUpper && hasLower && hasDigit && hasSpecial;
-    }
-
-    public PasswordStrength checkPasswordStrength(String password) {
-        int passwordScore = 0;
-
-        var passwordLength = password.length();
-
-        if (passwordLength >= 8) {
-            passwordScore += 2;
+        if (rules.isRequireUppercase() ||  password.chars().anyMatch(Character::isUpperCase)) {
+            hasUpper = true;
         }
 
-        if (passwordLength >= 12) {
-            passwordScore += 2;
+        if (rules.isRequireLowercase() ||  password.chars().anyMatch(Character::isLowerCase)) {
+            hasLower = true;
         }
 
-        if (passwordLength >= 16) {
-            passwordScore += 2;
+        if (rules.isRequireDigit() ||  password.chars().anyMatch(Character::isDigit)) {
+            hasDigit = true;
         }
 
-        for (boolean b : passwordValidityStates) {
-            if (b) {
-                passwordScore += 2;
-            }
+        if (rules.isRequireSpecial() ||  password.chars().anyMatch(c -> rules.getSpecialCharacter().indexOf(c) >= 0)) {
+            hasSpecial = true;
         }
 
-        if (passwordScore >= 10 && passwordScore < 12)  {
+        // Add points for each condition met
+        if (hasUpper) passwordScore += rules.getScoreFactor();
+        if (hasLower) passwordScore += rules.getScoreFactor();
+        if (hasDigit) passwordScore += rules.getScoreFactor();
+        if (hasSpecial) passwordScore += rules.getScoreFactor();
+
+        // Bonus for meeting all criteria
+        if (hasUpper && hasLower && hasDigit && hasSpecial) {
+            passwordScore += rules.getScoreFactor();
+        }
+
+        // Define strength thresholds (you can adjust these as needed)
+        if (passwordScore < rules.getWeakPasswordScore()) {
             return PasswordStrength.WEAK;
-        } else if (passwordScore >= 12 && passwordScore < 14)  {
+        } else if (passwordScore < rules.getModeratePasswordScore()) {
             return PasswordStrength.MODERATE;
         } else {
             return PasswordStrength.STRONG;

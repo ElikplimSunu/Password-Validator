@@ -16,15 +16,11 @@ public class Main {
             System.out.print("Enter Your Password: ");
             String password = userInput.nextLine();
 
-            try {
-                if (validator.isValid(password)) {
+                if (validator.isValid(password).getKey()) {
                     System.out.println("Password is valid. And your password is: " + validator.checkPasswordStrength(password));
                 } else {
-                    System.out.println("Password is invalid.");
+                    System.out.println("Password is invalid. Reason: " + validator.isValid(password).getValue());
                 }
-            } catch (IllegalArgumentException e) {
-                System.out.println("Password is invalid with the cause: " + e.getMessage());
-            }
 
             System.out.print("Do you want to run the app again? [Y/N]: ");
             userSelection = userInput.nextLine().toUpperCase(Locale.getDefault()).charAt(0);

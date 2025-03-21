@@ -7,14 +7,15 @@ import java.util.List;
 public class PasswordValidator {
     PasswordValidationRules rules;
 
+    // constructor for PasswordValidator to initialize PasswordValidationRule and assign it to the field
     public PasswordValidator() {
         this.rules = new PasswordValidationRules();
     }
 
     /**
      * Validates the given password based on the criteria:
-     * - Not null (throws IllegalArgumentException if it is).
-     * - At least 8 characters long.
+     * - Not null (logs an error if it is).
+     * - At least minLength characters long.
      * - Contains at least one uppercase letter, one lowercase letter, one digit, and one special character.
      *
      * @param password the password to validate
@@ -22,15 +23,27 @@ public class PasswordValidator {
      */
 
     public AbstractMap.SimpleEntry<Boolean, List<String>> isValid(String password) {
+        // New errors list to hold the errors
         List<String> errors = new ArrayList<>();
+
+        // Boolean to determine if the password is valid or not
         boolean isValid  = true;
+
+        // Check to see if the list of password validity errors is empty or not
+        // When the list is empty => the password is valid and vice versa.
         if(!validate(password).isEmpty()) {
             isValid = false;
             errors = validate(password);
         }
+
+        // Return the Boolean and the List of password validity errors
         return new AbstractMap.SimpleEntry<>(isValid, errors);
     }
 
+    /** This method validates the password string and logs each of the failed validations into a List of strings
+     * @param password
+     * @return List<String>
+     * */
     public List<String> validate (String password) {
         List<String> errors = new ArrayList<>();
 
@@ -52,11 +65,11 @@ public class PasswordValidator {
         }
 
         if (rules.isRequireDigit() &&  password.chars().noneMatch(Character::isDigit)) {
-            errors.add("Password must contain at least one lowercase character");
+            errors.add("Password must contain at least one number");
         }
 
         if (rules.isRequireSpecial() &&  password.chars().noneMatch(c -> rules.getSpecialCharacter().indexOf(c) >= 0)) {
-            errors.add("Password must contain at least one lowercase character");
+            errors.add("Password must contain at least one special character");
         }
 
         return errors;

@@ -19,7 +19,7 @@ public class Main {
                 if (validator.isValid(password).getKey()) {
                     System.out.println("Password is valid. And your password is: " + validator.checkPasswordStrength(password));
                 } else {
-                    System.out.println("Password is invalid. Reason: " + validator.isValid(password).getValue());
+                    System.out.println("Password is invalid. Reason(s): " + validator.isValid(password).getValue());
                 }
 
             System.out.print("Do you want to run the app again? [Y/N]: ");
